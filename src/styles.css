@@ -1,3 +1,124 @@
-/* You can add global styles to this file, and also import other style files */
 
-@import 'tailwindcss';
+@import "tailwindcss";
+
+:root {
+  --color-primary: #0F766E;
+  --color-primary-dark: #0B4F4A;
+  --color-primary-soft: #CCEBE7;
+  --color-primary-hover: #0B5F59;
+
+  --color-background: #F3F8F7;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F5FAF9;
+
+  --color-border: #D5E2E0;
+  --color-border-focus: #0F766E;
+
+  --color-text-primary: #1F2937;
+  --color-text-secondary: #4B5563;
+  --color-text-muted: #6B7280;
+  --color-text-inverse: #FFFFFF;
+
+  --color-success: #DCF3E4;
+  --color-success-text: #14532D;
+
+  --color-warning: #FDE8C8;
+  --color-warning-text: #7C3A06;
+
+  --color-disabled: #E5E7EB;
+  --color-disabled-text: #9CA3AF;
+
+  --shadow-card: 0 1px 3px rgb(15 79 74 / 8%);
+}
+
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-primary-dark: var(--color-primary-dark);
+  --color-primary-soft: var(--color-primary-soft);
+  --color-primary-hover: var(--color-primary-hover);
+
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-surface-hover: var(--color-surface-hover);
+
+  --color-border: var(--color-border);
+  --color-border-focus: var(--color-border-focus);
+
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-text-inverse: var(--color-text-inverse);
+
+  --color-success: var(--color-success);
+  --color-success-text: var(--color-success-text);
+
+  --color-warning: var(--color-warning);
+  --color-warning-text: var(--color-warning-text);
+
+  --color-disabled: var(--color-disabled);
+  --color-disabled-text: var(--color-disabled-text);
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-family: Roboto, sans-serif;
+}
+
+.mat-toolbar {
+  background-color: var(--color-primary) !important;
+  color: var(--color-text-inverse) !important;
+}
+
+.mat-mdc-card {
+  background-color: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card) !important;
+}
+
+.mat-mdc-raised-button.mat-primary {
+  background-color: var(--color-primary) !important;
+  color: var(--color-text-inverse) !important;
+}
+
+.mat-mdc-form-field {
+  --mdc-outlined-text-field-outline-color: var(--color-border);
+  --mdc-outlined-text-field-focus-outline-color: var(--color-primary);
+  --mdc-outlined-text-field-label-text-color: var(--color-text-secondary);
+}
+
+.mat-mdc-table {
+  background-color: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.mat-mdc-header-cell {
+  background-color: var(--color-primary-soft) !important;
+  color: var(--color-primary-dark) !important;
+  font-weight: 600;
+}
+
+.mat-mdc-cell {
+  color: var(--color-text-secondary) !important;
+  border-bottom-color: var(--color-border) !important;
+}
+
+.mat-mdc-dialog-surface {
+  background-color: var(--color-surface) !important;
+  color: var(--color-text-primary) !important;
+}
+
+.mat-mdc-menu-panel {
+  background-color: var(--color-surface) !important;
+}
+
+.mat-mdc-menu-item {
+  color: var(--color-text-primary) !important;
+}
