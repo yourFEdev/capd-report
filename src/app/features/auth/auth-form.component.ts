@@ -148,7 +148,7 @@ export class AuthForm {
         console.log('[AUTH FORM] Response:', response);
         console.log('[AUTH FORM] User:', this.auth.user());
 
-        this.router.navigateByUrl(this.returnUrl() ?? '/reports');
+        this.router.navigateByUrl(this.returnUrl() ?? '/dashboard');
       },
     });
   }

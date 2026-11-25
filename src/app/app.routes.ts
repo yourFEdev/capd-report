@@ -1,9 +1,15 @@
+import { inject } from '@angular/core';
 import { Routes } from '@angular/router';
-
 import { guestGuard, authGuard } from './core/guard/auth.guard';
+import { AuthService } from './core/services/auth.service';
 import { AdminLayoutComponent } from './layout/admin-layout/admin-layout';
 
 export const routes: Routes = [
+  {
+    path: '',
+    pathMatch: 'full',
+    redirectTo: () => (inject(AuthService).isLoggedIn() ? '/dashboard' : '/login'),
+  },
   {
     path: '',
     canActivate: [guestGuard],
@@ -29,8 +35,5 @@ export const routes: Routes = [
       },
     ],
   },
-  {
-    path: '**',
-    redirectTo: '/login',
-  },
+  { path: '**', redirectTo: '' }, // salah ketik URL → kembali ke "/", lalu diarahkan ke login/dashboard
 ];
