@@ -84,9 +84,9 @@ export class SidebarComponent {
       route: '/reports',
     },
     {
-      label: 'Setting',
-      icon: '⚙',
-      route: '/setting',
+      label: 'Profile',
+      icon: '♙',
+      route: '/profile',
     },
   ];
 

@@ -33,14 +33,12 @@ import { Report } from '../../core/models/report.model';
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 class="text-2xl font-bold tracking-tight text-text-primary">Reports</h1>
-          <p class="mt-1 text-sm text-text-muted">Kelola dan lihat daftar laporan harian.</p>
         </div>
 
         <a
           routerLink="new"
           class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-text-inverse shadow-sm transition hover:bg-primary-hover"
         >
-          <mat-icon class="!size-5 !text-xl">add</mat-icon>
           Create Report
         </a>
       </div>
@@ -50,11 +48,7 @@ import { Report } from '../../core/models/report.model';
         <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-full sm:max-w-sm">
           <mat-label>Search report</mat-label>
           <mat-icon matPrefix>search</mat-icon>
-          <input
-            matInput
-            [formControl]="searchControl"
-            placeholder="Cari judul atau deskripsi..."
-          />
+          <input matInput [formControl]="searchControl" placeholder="Find title" />
         </mat-form-field>
       </div>
 
@@ -99,6 +93,38 @@ import { Report } from '../../core/models/report.model';
               <p class="max-w-sm truncate text-sm text-text-secondary" [title]="r.description">
                 {{ r.description || '-' }}
               </p>
+            </td>
+          </ng-container>
+
+          <!-- Cycle Progress -->
+          <ng-container matColumnDef="cycleProgress">
+            <th
+              mat-header-cell
+              *matHeaderCellDef
+              class="!bg-surface-secondary !px-5 !py-4 !text-xs !font-semibold !uppercase !tracking-wider !text-text-muted"
+            >
+              Cycle Progress
+            </th>
+
+            <td mat-cell *matCellDef="let r" class="!px-5 !py-4">
+              <div class="flex min-w-28 flex-col gap-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-semibold text-text-primary">
+                    {{ getCycleCount(r) }}/4 Cycle
+                  </span>
+
+                  <span class="text-xs font-medium text-text-muted">
+                    {{ getCycleProgress(r) }}%
+                  </span>
+                </div>
+
+                <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-secondary">
+                  <div
+                    class="h-full rounded-full bg-primary transition-all duration-300"
+                    [style.width.%]="getCycleProgress(r)"
+                  ></div>
+                </div>
+              </div>
             </td>
           </ng-container>
 
@@ -176,6 +202,24 @@ import { Report } from '../../core/models/report.model';
                 <p class="mt-1 line-clamp-2 text-sm leading-relaxed text-text-secondary">
                   {{ r.description || '-' }}
                 </p>
+
+                <!-- Cycle Progress -->
+                <div class="mt-3">
+                  <div class="mb-1.5 flex items-center justify-between">
+                    <span class="text-xs font-medium text-text-muted"> Cycle Progress </span>
+
+                    <span class="text-xs font-semibold text-primary">
+                      {{ getCycleCount(r) }}/4 Cycle ({{ getCycleProgress(r) }}%)
+                    </span>
+                  </div>
+
+                  <div class="h-1.5 w-full overflow-hidden rounded-full bg-surface-secondary">
+                    <div
+                      class="h-full rounded-full bg-primary transition-all duration-300"
+                      [style.width.%]="getCycleProgress(r)"
+                    ></div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -232,7 +276,15 @@ export class ReportListComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
   private destroyRef = inject(DestroyRef);
 
-  columns = ['title', 'description', 'date', 'actions'];
+  columns = ['title', 'description', 'cycleProgress', 'date', 'actions'];
+
+  getCycleCount(report: Report): number {
+    return report.cycles?.length ?? 0;
+  }
+
+  getCycleProgress(report: Report): number {
+    return Math.min((this.getCycleCount(report) / 4) * 100, 100);
+  }
 
   searchControl = new FormControl('', {
     nonNullable: true,

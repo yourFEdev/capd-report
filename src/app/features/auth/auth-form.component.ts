@@ -139,25 +139,16 @@ export class AuthForm {
       : this.auth.login({ username, password });
 
     request$.subscribe({
-      next: () => {
-        const fallback = this.isRegister() ? '/login' : '/reports';
+      next: (response) => {
+        if (this.isRegister()) {
+          this.router.navigate(['/login']);
+          return;
+        }
 
-        this.router
-          .navigateByUrl(this.returnUrl() ?? fallback)
-          .then((success) => {
-            if (!success) {
-              this.loading.set(false);
-              this.error.set('Gagal berpindah halaman');
-            }
-          })
-          .catch(() => {
-            this.loading.set(false);
-            this.error.set('Terjadi kesalahan navigasi');
-          });
-      },
-      error: () => {
-        this.loading.set(false);
-        this.error.set(this.isRegister() ? 'register failed' : 'Username or password wrong');
+        console.log('[AUTH FORM] Response:', response);
+        console.log('[AUTH FORM] User:', this.auth.user());
+
+        this.router.navigateByUrl(this.returnUrl() ?? '/reports');
       },
     });
   }

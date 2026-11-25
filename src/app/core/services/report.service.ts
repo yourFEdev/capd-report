@@ -6,7 +6,7 @@ import { environment } from '../../../environments/environment';
 @Injectable({ providedIn: 'root' })
 export class ReportService {
   private http = inject(HttpClient);
-  private url = `http://localhost:3000/api/reports`;
+  private url = environment.apiUrl;
 
   getAll() {
     return this.http.get<Report[]>(`${this.url}/reports`);
