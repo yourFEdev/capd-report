@@ -3,7 +3,7 @@ export type ReportStatus = 'draft' | 'submitted' | 'approved';
 export interface ReportCycle {
   id: number;
   cycle: number;
-  period: 'Pagi' | 'Siang' | 'Sore' | 'Malam';
+  period: 'Morning' | 'Noon' | 'Afternoon' | 'Evening';
   startTime: string;
   concentration: '1.5%' | '2.5%' | '4.25%';
   volumeIn: number;

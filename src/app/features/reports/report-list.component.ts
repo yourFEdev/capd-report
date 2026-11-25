@@ -35,15 +35,25 @@ import { Report } from '../../core/models/report.model';
           <h1 class="text-2xl font-bold tracking-tight text-text-primary">Reports</h1>
         </div>
 
-        <a
-          routerLink="new"
-          class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-text-inverse shadow-sm transition hover:bg-primary-hover"
-        >
-          Create Report
-        </a>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <button
+            type="button"
+            (click)="exportAllPdf()"
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-semibold text-text-secondary shadow-sm transition hover:bg-primary-soft hover:text-primary"
+          >
+            <mat-icon class="!size-5 !text-xl">picture_as_pdf</mat-icon>
+            Export all PDF
+          </button>
+
+          <a
+            routerLink="new"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-text-inverse shadow-sm transition hover:bg-primary-hover"
+          >
+            Create Report
+          </a>
+        </div>
       </div>
 
-      <!-- Search -->
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-full sm:max-w-sm">
           <mat-label>Search report</mat-label>
@@ -52,17 +62,14 @@ import { Report } from '../../core/models/report.model';
         </mat-form-field>
       </div>
 
-      <!-- Loading -->
       @if (store.loading()) {
         <mat-progress-bar mode="indeterminate" />
       }
 
-      <!-- Desktop Table -->
       <div
         class="hidden overflow-hidden rounded-xl border border-border bg-surface shadow-sm md:block"
       >
         <table mat-table [dataSource]="store.filtered()" class="w-full">
-          <!-- Title -->
           <ng-container matColumnDef="title">
             <th
               mat-header-cell
@@ -157,6 +164,15 @@ import { Report } from '../../core/models/report.model';
 
             <td mat-cell *matCellDef="let r" class="!px-5 !py-3">
               <div class="flex justify-end gap-2">
+                <button
+                  type="button"
+                  (click)="exportPdf(r)"
+                  title="Export PDF"
+                  class="flex size-9 items-center justify-center rounded-lg text-text-secondary transition hover:bg-primary-soft hover:text-primary"
+                >
+                  <mat-icon>picture_as_pdf</mat-icon>
+                </button>
+
                 <a
                   [routerLink]="[r.id, 'edit']"
                   title="Edit report"
@@ -187,7 +203,6 @@ import { Report } from '../../core/models/report.model';
         </table>
       </div>
 
-      <!-- Mobile Cards -->
       <div class="flex flex-col gap-3 md:hidden">
         @for (r of store.filtered(); track r.id) {
           <div
@@ -203,7 +218,6 @@ import { Report } from '../../core/models/report.model';
                   {{ r.description || '-' }}
                 </p>
 
-                <!-- Cycle Progress -->
                 <div class="mt-3">
                   <div class="mb-1.5 flex items-center justify-between">
                     <span class="text-xs font-medium text-text-muted"> Cycle Progress </span>
@@ -231,6 +245,14 @@ import { Report } from '../../core/models/report.model';
               </div>
 
               <div class="flex gap-2">
+                <button
+                  type="button"
+                  (click)="exportPdf(r)"
+                  title="Export PDF"
+                  class="flex size-9 items-center justify-center rounded-lg text-text-secondary transition hover:bg-primary-soft hover:text-primary"
+                >
+                  <mat-icon>picture_as_pdf</mat-icon>
+                </button>
                 <a
                   [routerLink]="[r.id, 'edit']"
                   title="Edit report"
@@ -253,7 +275,6 @@ import { Report } from '../../core/models/report.model';
         }
       </div>
 
-      <!-- Empty State -->
       @if (!store.loading() && store.filtered().length === 0) {
         <div
           class="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-surface px-4 py-14 text-center"
@@ -311,5 +332,30 @@ export class ReportListComponent implements OnInit {
         this.snackBar.open('failed delete report', 'close', { duration: 2500 });
       },
     });
+  }
+
+  async exportPdf(report: Report): Promise<void> {
+    try {
+      const { exportReportPdf } = await import('../../core/utils/report-pdf');
+      exportReportPdf(report);
+    } catch {
+      this.snackBar.open('Failed to export PDF', 'Close', { duration: 2500 });
+    }
+  }
+
+  async exportAllPdf(): Promise<void> {
+    const reports: Report[] = this.store.filtered();
+
+    if (reports.length === 0) {
+      this.snackBar.open('No reports to export', 'Close', { duration: 2500 });
+      return;
+    }
+
+    try {
+      const { exportAllReportsPdf } = await import('../../core/utils/report-pdf');
+      exportAllReportsPdf(reports);
+    } catch {
+      this.snackBar.open('Failed to export PDF', 'Close', { duration: 2500 });
+    }
   }
 }

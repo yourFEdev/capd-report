@@ -1,7 +1,16 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, Signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  FormArray,
+  FormBuilder,
+  FormControl,
+  FormGroup,
+  NonNullableFormBuilder,
+  ReactiveFormsModule,
+  Validators,
+} from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { Observable } from 'rxjs';
 import { MAT_DATE_LOCALE, provideNativeDateAdapter } from '@angular/material/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -18,7 +27,31 @@ import { HasUnsavedChanges } from '../../core/guard/unsave-changes.guard';
 
 const UF_BASE = 2000;
 
-const pad = (n: number) => String(n).padStart(2, '0');
+type CycleFormGroup = FormGroup<{
+  cycle: FormControl<number>;
+  period: FormControl<ReportCycle['period']>;
+  startTime: FormControl<Date | null>;
+  concentration: FormControl<ReportCycle['concentration']>;
+  volumeIn: FormControl<number>;
+  volumeOut: FormControl<number>;
+  fluidAppearance: FormControl<string>;
+  notes: FormControl<string>;
+}>;
+
+type ReportFormGroup = FormGroup<{
+  title: FormControl<string>;
+  description: FormControl<string>;
+  date: FormControl<Date | null>;
+  cycles: FormArray<CycleFormGroup>;
+}>;
+
+interface ReportTotals {
+  totalVolumeIn: number;
+  totalVolumeOut: number;
+  totalUF: number;
+}
+
+const pad = (n: number): string => String(n).padStart(2, '0');
 
 function dateToString(d: Date | null): string {
   if (!d) return '';
@@ -51,50 +84,48 @@ function stringToTime(s: string | null | undefined): Date | null {
     MatButtonModule,
     MatIconModule,
   ],
-  providers: [provideNativeDateAdapter(), { provide: MAT_DATE_LOCALE, useValue: 'id-ID' }],
+  providers: [provideNativeDateAdapter(), { provide: MAT_DATE_LOCALE, useValue: 'en-US' }],
   template: `
-    <div class="mx-auto flex max-w-4xl flex-col gap-4 p-4 sm:p-6">
+    <div class="mx-auto flex flex-col gap-4 p-4">
       <h1 class="text-xl font-semibold text-text-primary sm:text-2xl">
-        {{ id() ? 'Edit laporan' : 'Buat laporan' }}
+        {{ id() ? 'Edit report' : 'Create report' }}
       </h1>
 
       <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
-        <!-- Informasi umum -->
         <section
           class="rounded-xl border border-border bg-surface p-4 shadow-[var(--shadow-card)] sm:p-6"
         >
-          <h2 class="mb-4 text-base font-semibold text-primary-dark">Informasi umum</h2>
+          <h2 class="mb-4 text-base font-semibold text-primary-dark">General information</h2>
 
           <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
             <mat-form-field appearance="outline" class="w-full sm:col-span-2">
-              <mat-label>Judul</mat-label>
+              <mat-label>Title</mat-label>
               <input matInput formControlName="title" />
               @if (form.controls.title.hasError('required')) {
-                <mat-error>Judul wajib diisi</mat-error>
+                <mat-error>Title is required</mat-error>
               } @else if (form.controls.title.hasError('minlength')) {
-                <mat-error>Minimal 5 karakter</mat-error>
+                <mat-error>Minimum 5 characters</mat-error>
               }
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="w-full sm:col-span-2">
-              <mat-label>Tanggal</mat-label>
+              <mat-label>Date</mat-label>
               <input matInput [matDatepicker]="datePicker" formControlName="date" />
               <mat-datepicker-toggle matIconSuffix [for]="datePicker" />
               <mat-datepicker #datePicker />
-              <mat-error>Tanggal wajib diisi</mat-error>
+              <mat-error>Date is required</mat-error>
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="w-full sm:col-span-2">
-              <mat-label>Deskripsi</mat-label>
+              <mat-label>Description</mat-label>
               <textarea matInput rows="3" formControlName="description"></textarea>
             </mat-form-field>
           </div>
         </section>
 
-        <!-- Siklus -->
         <section class="flex flex-col gap-3">
           <div class="flex items-center justify-between gap-3">
-            <h2 class="text-base font-semibold text-primary-dark">Siklus</h2>
+            <h2 class="text-base font-semibold text-primary-dark">Cycles</h2>
             <button
               mat-stroked-button
               type="button"
@@ -102,7 +133,7 @@ function stringToTime(s: string | null | undefined): Date | null {
               class="!border-primary !text-primary"
             >
               <mat-icon>add</mat-icon>
-              Tambah siklus
+              Add cycle
             </button>
           </div>
 
@@ -115,12 +146,12 @@ function stringToTime(s: string | null | undefined): Date | null {
                 <legend
                   class="rounded-full bg-primary-soft px-3 py-0.5 text-sm font-semibold text-primary-dark"
                 >
-                  Siklus {{ i + 1 }}
+                  Cycle {{ i + 1 }}
                 </legend>
 
                 <div class="mt-2 grid grid-cols-1 gap-x-4 sm:grid-cols-2 lg:grid-cols-3">
                   <mat-form-field appearance="outline" class="w-full">
-                    <mat-label>Periode</mat-label>
+                    <mat-label>Period</mat-label>
                     <mat-select formControlName="period">
                       @for (p of periods; track p) {
                         <mat-option [value]="p">{{ p }}</mat-option>
@@ -129,15 +160,15 @@ function stringToTime(s: string | null | undefined): Date | null {
                   </mat-form-field>
 
                   <mat-form-field appearance="outline" class="w-full">
-                    <mat-label>Jam mulai</mat-label>
+                    <mat-label>Start time</mat-label>
                     <input matInput [matTimepicker]="timePicker" formControlName="startTime" />
                     <mat-timepicker-toggle matIconSuffix [for]="timePicker" />
                     <mat-timepicker #timePicker />
-                    <mat-error>Jam mulai wajib diisi</mat-error>
+                    <mat-error>Start time is required</mat-error>
                   </mat-form-field>
 
                   <mat-form-field appearance="outline" class="w-full">
-                    <mat-label>Konsentrasi</mat-label>
+                    <mat-label>Concentration</mat-label>
                     <mat-select formControlName="concentration">
                       @for (c of concentrations; track c) {
                         <mat-option [value]="c">{{ c }}</mat-option>
@@ -146,28 +177,28 @@ function stringToTime(s: string | null | undefined): Date | null {
                   </mat-form-field>
 
                   <mat-form-field appearance="outline" class="w-full">
-                    <mat-label>Volume masuk (ml)</mat-label>
+                    <mat-label>Volume in (ml)</mat-label>
                     <input matInput type="number" formControlName="volumeIn" />
                     @if (group.controls.volumeIn.hasError('min')) {
-                      <mat-error>Tidak boleh negatif</mat-error>
+                      <mat-error>Must not be negative</mat-error>
                     }
                   </mat-form-field>
 
                   <mat-form-field appearance="outline" class="w-full">
-                    <mat-label>Volume keluar (ml)</mat-label>
+                    <mat-label>Volume out (ml)</mat-label>
                     <input matInput type="number" formControlName="volumeOut" />
                     @if (group.controls.volumeOut.hasError('min')) {
-                      <mat-error>Tidak boleh negatif</mat-error>
+                      <mat-error>Must not be negative</mat-error>
                     }
                   </mat-form-field>
 
                   <mat-form-field appearance="outline" class="w-full">
-                    <mat-label>Tampilan cairan</mat-label>
+                    <mat-label>Fluid appearance</mat-label>
                     <input matInput formControlName="fluidAppearance" />
                   </mat-form-field>
 
                   <mat-form-field appearance="outline" class="w-full sm:col-span-2 lg:col-span-3">
-                    <mat-label>Catatan</mat-label>
+                    <mat-label>Notes</mat-label>
                     <input matInput formControlName="notes" />
                   </mat-form-field>
                 </div>
@@ -178,7 +209,7 @@ function stringToTime(s: string | null | undefined): Date | null {
                   <span
                     class="inline-flex w-fit items-center rounded-lg bg-primary-soft px-3 py-1.5 text-sm font-semibold text-primary-dark"
                   >
-                    UF siklus ini: {{ cycleUfs()[i] ?? 0 }} ml
+                    UF for this cycle: {{ cycleUfs()[i] ?? 0 }} ml
                   </span>
                   <button
                     mat-button
@@ -188,7 +219,7 @@ function stringToTime(s: string | null | undefined): Date | null {
                     class="!text-warning-text disabled:!text-disabled-text"
                   >
                     <mat-icon>delete</mat-icon>
-                    Hapus siklus
+                    Delete cycle
                   </button>
                 </div>
               </fieldset>
@@ -196,16 +227,15 @@ function stringToTime(s: string | null | undefined): Date | null {
           </div>
         </section>
 
-        <!-- Ringkasan -->
         <section
           class="grid grid-cols-1 gap-3 rounded-xl border border-border bg-surface p-4 shadow-[var(--shadow-card)] sm:grid-cols-3 sm:p-6"
         >
           <div class="rounded-lg bg-background px-4 py-3">
-            <p class="text-xs text-text-muted">Total volume masuk</p>
+            <p class="text-xs text-text-muted">Total volume in</p>
             <p class="text-lg font-semibold text-text-primary">{{ totals().totalVolumeIn }} ml</p>
           </div>
           <div class="rounded-lg bg-background px-4 py-3">
-            <p class="text-xs text-text-muted">Total volume keluar</p>
+            <p class="text-xs text-text-muted">Total volume out</p>
             <p class="text-lg font-semibold text-text-primary">{{ totals().totalVolumeOut }} ml</p>
           </div>
           <div class="rounded-lg bg-primary-soft px-4 py-3">
@@ -214,10 +244,9 @@ function stringToTime(s: string | null | undefined): Date | null {
           </div>
         </section>
 
-        <!-- Aksi -->
         <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <a mat-stroked-button routerLink="/reports" class="!border-border !text-text-secondary">
-            Batal
+            Cancel
           </a>
           <button
             mat-flat-button
@@ -225,7 +254,7 @@ function stringToTime(s: string | null | undefined): Date | null {
             [disabled]="form.invalid || saving()"
             class="!bg-primary !text-text-inverse disabled:!bg-disabled disabled:!text-disabled-text"
           >
-            {{ saving() ? 'Menyimpan...' : 'Simpan laporan' }}
+            {{ saving() ? 'Saving...' : 'Save report' }}
           </button>
         </div>
       </form>
@@ -233,40 +262,40 @@ function stringToTime(s: string | null | undefined): Date | null {
   `,
 })
 export class ReportFormComponent implements HasUnsavedChanges {
-  private fb = inject(FormBuilder).nonNullable;
-  private api = inject(ReportService);
-  private store = inject(ReportStore);
-  private router = inject(Router);
-  private snackBar = inject(MatSnackBar);
+  private fb: NonNullableFormBuilder = inject(FormBuilder).nonNullable;
+  private api: ReportService = inject(ReportService);
+  private store: ReportStore = inject(ReportStore);
+  private router: Router = inject(Router);
+  private snackBar: MatSnackBar = inject(MatSnackBar);
 
-  id = input<number, string | undefined>(undefined, {
-    transform: (v) => (v ? Number(v) : undefined),
+  id = input<number | undefined, string | undefined>(undefined, {
+    transform: (v: string | undefined): number | undefined => (v ? Number(v) : undefined),
   });
 
-  saving = signal(false);
+  saving = signal<boolean>(false);
 
-  periods: ReportCycle['period'][] = ['Pagi', 'Siang', 'Sore', 'Malam'];
+  periods: ReportCycle['period'][] = ['Morning', 'Noon', 'Afternoon', 'Evening'];
   concentrations: ReportCycle['concentration'][] = ['1.5%', '2.5%', '4.25%'];
 
-  form = this.fb.group({
+  form: ReportFormGroup = this.fb.group({
     title: ['', [Validators.required, Validators.minLength(5)]],
     description: [''],
     date: [new Date() as Date | null, Validators.required],
-    cycles: this.fb.array([this.createCycleGroup()]),
+    cycles: this.fb.array<CycleFormGroup>([this.createCycleGroup()]),
   });
 
-  get cycles() {
+  get cycles(): FormArray<CycleFormGroup> {
     return this.form.controls.cycles;
   }
 
   private formChange = toSignal(this.form.valueChanges, { initialValue: null });
 
-  cycleUfs = computed(() => {
-    this.formChange(); // dibaca supaya computed ini ikut ter-update
+  cycleUfs: Signal<number[]> = computed<number[]>(() => {
+    this.formChange();
     return this.cycles.getRawValue().map((c) => this.num(c.volumeOut) - UF_BASE);
   });
 
-  totals = computed(() => {
+  totals: Signal<ReportTotals> = computed<ReportTotals>(() => {
     this.formChange();
     const rows = this.cycles.getRawValue();
     const totalVolumeIn = rows.reduce((sum, c) => sum + this.num(c.volumeIn), 0);
@@ -276,8 +305,8 @@ export class ReportFormComponent implements HasUnsavedChanges {
   });
 
   constructor() {
-    effect(() => {
-      const id = this.id();
+    effect((): void => {
+      const id: number | undefined = this.id();
       if (!id) return;
 
       this.api.getById(id).subscribe((report) => {
@@ -287,8 +316,6 @@ export class ReportFormComponent implements HasUnsavedChanges {
           date: new Date(report.date),
         });
 
-        // patchValue TIDAK menambah/mengurangi jumlah item FormArray,
-        // jadi kosongkan dulu lalu isi ulang sesuai data dari API
         this.cycles.clear();
         report.cycles.forEach((c) => this.cycles.push(this.createCycleGroup(c)));
 
@@ -297,10 +324,10 @@ export class ReportFormComponent implements HasUnsavedChanges {
     });
   }
 
-  private createCycleGroup(c?: Partial<ReportCyclePayload>) {
+  private createCycleGroup(c?: Partial<ReportCyclePayload>): CycleFormGroup {
     return this.fb.group({
       cycle: [c?.cycle ?? 1],
-      period: [c?.period ?? ('Pagi' as ReportCycle['period']), Validators.required],
+      period: [c?.period ?? ('Morning' as ReportCycle['period']), Validators.required],
       startTime: [stringToTime(c?.startTime), Validators.required],
       concentration: [
         c?.concentration ?? ('1.5%' as ReportCycle['concentration']),
@@ -313,19 +340,18 @@ export class ReportFormComponent implements HasUnsavedChanges {
     });
   }
 
-  addCycle() {
+  addCycle(): void {
     this.cycles.push(this.createCycleGroup({ cycle: this.cycles.length + 1 }));
-    this.form.markAsDirty(); // push/removeAt tidak otomatis menandai form "berubah"
+    this.form.markAsDirty();
   }
 
-  removeCycle(index: number) {
+  removeCycle(index: number): void {
     this.cycles.removeAt(index);
-    // nomor siklus dirapikan lagi: 1, 2, 3, ...
     this.cycles.controls.forEach((group, i) => group.controls.cycle.setValue(i + 1));
     this.form.markAsDirty();
   }
 
-  submit() {
+  submit(): void {
     if (this.form.invalid) return;
     this.saving.set(true);
 
@@ -333,35 +359,37 @@ export class ReportFormComponent implements HasUnsavedChanges {
     const payload: ReportPayload = {
       title: raw.title,
       description: raw.description,
-      date: dateToString(raw.date), // Date -> 'yyyy-MM-dd'
-      cycles: raw.cycles.map((c) => ({
+      date: dateToString(raw.date),
+      cycles: raw.cycles.map((c): ReportCyclePayload => ({
         ...c,
-        startTime: timeToString(c.startTime), // Date -> 'HH:mm'
+        startTime: timeToString(c.startTime),
         volumeIn: this.num(c.volumeIn),
         volumeOut: this.num(c.volumeOut),
         uf: this.num(c.volumeOut) - UF_BASE,
       })),
-      ...this.totals(), // totalVolumeIn, totalVolumeOut, totalUF
+      ...this.totals(),
     };
 
-    const id = this.id();
-    const request$ = id ? this.store.update(id, payload) : this.store.add(payload);
+    const id: number | undefined = this.id();
+    const request$: Observable<unknown> = id
+      ? this.store.update(id, payload)
+      : this.store.add(payload);
 
     request$.subscribe({
       next: () => {
-        this.form.markAsPristine(); // supaya unsavedChangesGuard tidak menahan navigasi
-        this.snackBar.open('Laporan disimpan', 'Tutup', { duration: 2500 });
+        this.form.markAsPristine();
+        this.snackBar.open('Report saved', 'Close', { duration: 2500 });
         this.router.navigate(['/reports']);
       },
       error: () => this.saving.set(false),
     });
   }
 
-  hasUnsavedChanges() {
+  hasUnsavedChanges(): boolean {
     return this.form.dirty;
   }
 
-  private num(v: number | null | undefined) {
+  private num(v: number | null | undefined): number {
     return Number(v) || 0;
   }
 }

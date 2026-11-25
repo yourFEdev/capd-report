@@ -1,17 +1,22 @@
 export interface DashboardAlert {
   type: string;
   cycle: number;
-  time: string;
   message: string;
+}
+
+export interface BloodPressureSummary {
+  systolic: number;
+  diastolic: number;
+  period: string; // backend mengirim "Morning"
 }
 
 export interface DashboardSummary {
   exchangeCompleted: number;
   exchangeTotal: number;
   totalBalance: number;
-  targetBalance: number;
-  bloodPressure: string | null;
-  weight: number | null;
+  targetBalance?: number | null; // opsional: tidak ada di response sekarang
+  bloodPressure: BloodPressureSummary | null;
+  weightKg: number | null;
 }
 
 export interface BalanceBar {
@@ -22,7 +27,7 @@ export interface BalanceBar {
 
 export interface DashboardExchange {
   cycle: number;
-  time: string;
+  time: string | null;
   concentration: string | null;
   volumeIn: number | null;
   volumeOut: number | null;
